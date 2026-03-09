@@ -44,14 +44,30 @@ export default function AddTodo() {
     }
     setSubmitting(true)
     try {
-      let imageValue = ''
+      let imageUrl = ''
       if (imageFile) {
-        imageValue = await new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result)
-          reader.onerror = reject
-          reader.readAsDataURL(imageFile)
+        const presignRes = await fetch('/api/todos/upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: imageFile.name,
+            content_type: imageFile.type || 'image/jpeg',
+          }),
         })
+        if (!presignRes.ok) {
+          const data = await presignRes.json().catch(() => ({}))
+          throw new Error(data.detail || 'Failed to get upload URL')
+        }
+        const { upload_url, object_url } = await presignRes.json()
+        const uploadRes = await fetch(upload_url, {
+          method: 'PUT',
+          body: imageFile,
+          headers: { 'Content-Type': imageFile.type || 'image/jpeg' },
+        })
+        if (!uploadRes.ok) {
+          throw new Error('Failed to upload image to S3')
+        }
+        imageUrl = object_url
       }
       const res = await fetch('/api/todos/', {
         method: 'POST',
@@ -59,7 +75,7 @@ export default function AddTodo() {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
-          image: imageValue,
+          image: imageUrl,
         }),
       })
       if (!res.ok) {
