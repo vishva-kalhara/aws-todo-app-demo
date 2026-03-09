@@ -5,9 +5,10 @@ export default function TodoList() {
   const [todos, setTodos] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
-  useEffect(() => {
-    fetch('/api/todos/')
+  const fetchTodos = () => {
+    return fetch('/api/todos/')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load todos')
         return res.json()
@@ -17,9 +18,25 @@ export default function TodoList() {
         setTodos(list)
         setError(null)
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchTodos().catch((err) => setError(err.message)).finally(() => setLoading(false))
   }, [])
+
+  const handleDelete = async (todoId) => {
+    if (!window.confirm('Delete this todo?')) return
+    setDeletingId(todoId)
+    try {
+      const res = await fetch(`/api/todos/${todoId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setTodos((prev) => prev.filter((t) => t.id !== todoId))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   if (loading) return <div className="loading">Loading todos…</div>
   if (error) return <div className="error">Error: {error}</div>
@@ -52,6 +69,19 @@ export default function TodoList() {
                 {todo.description && <p>{todo.description}</p>}
                 <div className="todo-meta">
                   {todo.created_at && new Date(todo.created_at).toLocaleString()}
+                </div>
+                <div className="todo-actions">
+                  <Link to={`/todos/${todo.id}/edit`} className="btn btn-small btn-secondary">
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-small btn-danger"
+                    onClick={() => handleDelete(todo.id)}
+                    disabled={deletingId === todo.id}
+                  >
+                    {deletingId === todo.id ? 'Deleting…' : 'Delete'}
+                  </button>
                 </div>
               </div>
             </li>

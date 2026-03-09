@@ -81,6 +81,16 @@ body {
   font-size: 0.8125rem;
 }
 
+.btn-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* Todo list */
 .todos-list {
   list-style: none;
@@ -139,6 +149,12 @@ body {
   margin-top: 0.5rem;
   font-size: 0.75rem;
   color: #94a3b8;
+}
+
+.todo-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .empty-state {
