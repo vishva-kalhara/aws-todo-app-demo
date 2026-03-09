@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'todos',
 ]
 
 MIDDLEWARE = [
@@ -27,6 +29,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+APPEND_SLASH = False
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
