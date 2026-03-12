@@ -6,15 +6,26 @@ A full-stack Todo application with a React frontend, Django REST API, PostgreSQL
 
 ## Table of contents
 
-- [Quick start](#quick-start)
-- [Architecture](#architecture)
-- [Components](#components)
-- [Environment variables](#environment-variables)
-- [Deployment on AWS EC2](#deployment-on-aws-ec2)
-- [API reference](#api-reference)
-- [Repository layout](#repository-layout)
-- [Security](#security)
-- [Troubleshooting](#troubleshooting)
+- [Todo App – React, Django, PostgreSQL, S3](#todo-app--react-django-postgresql-s3)
+    - [Table of contents](#table-of-contents)
+    - [Quick start](#quick-start)
+    - [Architecture](#architecture)
+        - [High-level architecture (AWS EC2)](#high-level-architecture-aws-ec2)
+        - [Request flow](#request-flow)
+        - [Component diagram](#component-diagram)
+    - [Components](#components)
+    - [Environment variables](#environment-variables)
+        - [Backend (Django)](#backend-django)
+        - [Frontend (build-time)](#frontend-build-time)
+    - [Deployment on AWS EC2](#deployment-on-aws-ec2)
+        - [Prerequisites](#prerequisites)
+        - [Steps](#steps)
+        - [S3 setup (summary)](#s3-setup-summary)
+        - [Optional: single entry point on port 80](#optional-single-entry-point-on-port-80)
+    - [API reference](#api-reference)
+    - [Repository layout](#repository-layout)
+    - [Security](#security)
+    - [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -25,15 +36,15 @@ A full-stack Todo application with a React frontend, Django REST API, PostgreSQL
 1. Clone the repo and create a `.env` file in the project root (see [Environment variables](#environment-variables)).
 2. Run the stack:
 
-   ```bash
-   docker compose up -d --build
-   ```
+    ```bash
+    docker compose up -d --build
+    ```
 
 3. Run migrations (first time only):
 
-   ```bash
-   docker compose exec backend python manage.py migrate
-   ```
+    ```bash
+    docker compose exec backend python manage.py migrate
+    ```
 
 4. Open the app at **http://localhost:3000** (or **http://localhost/api/** for API-only via Nginx on port 80).
 
@@ -137,38 +148,18 @@ flowchart LR
   A --> P
 ```
 
-### Production variant (optional: ALB + HTTPS)
-
-```mermaid
-flowchart TB
-  User[User]
-  Route53[Route 53]
-  ACM[ACM Certificate]
-  ALB[Application Load Balancer]
-  EC2[EC2 - Docker Compose]
-  S3[S3]
-  CloudFront[CloudFront - optional]
-
-  User --> Route53
-  Route53 --> ALB
-  ALB --> EC2
-  EC2 --> S3
-  User -.->|Images| CloudFront
-  CloudFront -.-> S3
-```
-
 ---
 
 ## Components
 
-| Component   | Technology           | Port (host)   | Role                                                                 |
-|------------|----------------------|---------------|----------------------------------------------------------------------|
-| **Nginx**  | nginx:alpine         | 80            | Reverse proxy; forwards `/api/` to Django.                           |
-| **Frontend** | React (Vite), nginx | 3000          | SPA; serves UI and proxies `/api/` to backend.                       |
-| **Backend**  | Django + DRF + Gunicorn | (internal 8000) | REST API: todos CRUD, health, S3 presigned URLs.                 |
-| **PostgreSQL** | postgres:16-alpine | 5432        | Persistent data store.                                               |
-| **Adminer**   | adminer:latest    | 8080          | Web UI for database management.                                      |
-| **S3**       | AWS S3            | —             | Image uploads (browser → S3 via presigned URL).                       |
+| Component      | Technology              | Port (host)     | Role                                             |
+| -------------- | ----------------------- | --------------- | ------------------------------------------------ |
+| **Nginx**      | nginx:alpine            | 80              | Reverse proxy; forwards `/api/` to Django.       |
+| **Frontend**   | React (Vite), nginx     | 3000            | SPA; serves UI and proxies `/api/` to backend.   |
+| **Backend**    | Django + DRF + Gunicorn | (internal 8000) | REST API: todos CRUD, health, S3 presigned URLs. |
+| **PostgreSQL** | postgres:16-alpine      | 5432            | Persistent data store.                           |
+| **Adminer**    | adminer:latest          | 8080            | Web UI for database management.                  |
+| **S3**         | AWS S3                  | —               | Image uploads (browser → S3 via presigned URL).  |
 
 **Traffic:**
 
@@ -188,28 +179,28 @@ Create a `.env` file in the project root. Docker Compose substitutes these into 
 
 ### Backend (Django)
 
-| Variable                  | Description              | Example / note                                  |
-|---------------------------|--------------------------|-------------------------------------------------|
-| `SECRET_KEY`              | Django secret            | Strong random value in production               |
-| `DEBUG`                   | Debug mode               | `False` on EC2                                  |
-| `ALLOWED_HOSTS`           | Comma-separated hosts    | `your-domain.com,ec2-xx-xx.compute.amazonaws.com` |
-| `POSTGRES_HOST`           | DB host                  | `postgres` (Compose service name)               |
-| `POSTGRES_PORT`           | DB port                  | `5432`                                         |
-| `POSTGRES_DB`             | Database name            | `app`                                          |
-| `POSTGRES_USER`           | DB user                  | `app`                                          |
-| `POSTGRES_PASSWORD`       | DB password              | Strong password                                |
-| `AWS_ACCESS_KEY_ID`       | IAM key for S3           | From IAM user                                  |
-| `AWS_SECRET_ACCESS_KEY`   | IAM secret               | From IAM user                                  |
-| `AWS_STORAGE_BUCKET_NAME` | S3 bucket name           | `my-todo-images`                               |
-| `AWS_S3_REGION_NAME`     | AWS region               | `us-east-1`                                    |
-| `AWS_S3_CUSTOM_DOMAIN`    | Optional (e.g. CloudFront) | `d123.cloudfront.net`                        |
-| `CORS_ALLOWED_ORIGINS`    | Allowed frontend origins | `http://localhost:3000,https://your-domain.com` |
+| Variable                  | Description                | Example / note                                    |
+| ------------------------- | -------------------------- | ------------------------------------------------- |
+| `SECRET_KEY`              | Django secret              | Strong random value in production                 |
+| `DEBUG`                   | Debug mode                 | `False` on EC2                                    |
+| `ALLOWED_HOSTS`           | Comma-separated hosts      | `your-domain.com,ec2-xx-xx.compute.amazonaws.com` |
+| `POSTGRES_HOST`           | DB host                    | `postgres` (Compose service name)                 |
+| `POSTGRES_PORT`           | DB port                    | `5432`                                            |
+| `POSTGRES_DB`             | Database name              | `app`                                             |
+| `POSTGRES_USER`           | DB user                    | `app`                                             |
+| `POSTGRES_PASSWORD`       | DB password                | Strong password                                   |
+| `AWS_ACCESS_KEY_ID`       | IAM key for S3             | From IAM user                                     |
+| `AWS_SECRET_ACCESS_KEY`   | IAM secret                 | From IAM user                                     |
+| `AWS_STORAGE_BUCKET_NAME` | S3 bucket name             | `my-todo-images`                                  |
+| `AWS_S3_REGION_NAME`      | AWS region                 | `us-east-1`                                       |
+| `AWS_S3_CUSTOM_DOMAIN`    | Optional (e.g. CloudFront) | `d123.cloudfront.net`                             |
+| `CORS_ALLOWED_ORIGINS`    | Allowed frontend origins   | `http://localhost:3000,https://your-domain.com`   |
 
 ### Frontend (build-time)
 
-| Variable               | Description                    | Example                     |
-|------------------------|--------------------------------|-----------------------------|
-| `VITE_IMAGE_BASE_URL`  | Optional CDN base for image URLs | `https://d123.cloudfront.net` |
+| Variable              | Description                      | Example                       |
+| --------------------- | -------------------------------- | ----------------------------- |
+| `VITE_IMAGE_BASE_URL` | Optional CDN base for image URLs | `https://d123.cloudfront.net` |
 
 Do not commit `.env`; use a `.env.example` as a template.
 
@@ -230,33 +221,33 @@ Do not commit `.env`; use a `.env.example` as a template.
 
 2. **Install Docker & Docker Compose** (example for Amazon Linux 2):
 
-   ```bash
-   sudo yum update -y
-   sudo yum install -y docker
-   sudo systemctl start docker && sudo systemctl enable docker
-   sudo usermod -aG docker ec2-user
-   sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-   sudo chmod +x /usr/local/bin/docker-compose
-   ```
+    ```bash
+    sudo yum update -y
+    sudo yum install -y docker
+    sudo systemctl start docker && sudo systemctl enable docker
+    sudo usermod -aG docker ec2-user
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    ```
 
 3. **Clone the repo** and add a `.env` file with production values (see [Environment variables](#environment-variables)).
 
 4. **Run the stack:**
 
-   ```bash
-   docker compose up -d --build
-   ```
+    ```bash
+    docker compose up -d --build
+    ```
 
 5. **Run migrations** (first run only):
 
-   ```bash
-   docker compose exec backend python manage.py migrate
-   ```
+    ```bash
+    docker compose exec backend python manage.py migrate
+    ```
 
 6. **Access:**
-   - App (SPA + API): **http://&lt;ec2-public-ip&gt;:3000**
-   - API only: **http://&lt;ec2-public-ip&gt;:80/api/**
-   - Adminer: **http://&lt;ec2-public-ip&gt;:8080** (restrict or disable in production).
+    - App (SPA + API): **http://&lt;ec2-public-ip&gt;:3000**
+    - API only: **http://&lt;ec2-public-ip&gt;:80/api/**
+    - Adminer: **http://&lt;ec2-public-ip&gt;:8080** (restrict or disable in production).
 
 ### S3 setup (summary)
 
@@ -275,15 +266,15 @@ To serve both the SPA and the API on port 80:
 
 ## API reference
 
-| Method | Path                      | Description                                      |
-|--------|---------------------------|--------------------------------------------------|
-| GET    | `/api/health`             | Health check                                     |
-| GET    | `/api/todos/`             | List todos                                       |
-| POST   | `/api/todos/`             | Create todo                                      |
-| GET    | `/api/todos/<id>`         | Get todo                                         |
-| PUT    | `/api/todos/<id>`         | Update todo                                      |
-| DELETE | `/api/todos/<id>`         | Delete todo                                      |
-| POST   | `/api/todos/upload-url`   | Get S3 presigned upload URL (body: `filename`, `content_type`) |
+| Method | Path                    | Description                                                    |
+| ------ | ----------------------- | -------------------------------------------------------------- |
+| GET    | `/api/health`           | Health check                                                   |
+| GET    | `/api/todos/`           | List todos                                                     |
+| POST   | `/api/todos/`           | Create todo                                                    |
+| GET    | `/api/todos/<id>`       | Get todo                                                       |
+| PUT    | `/api/todos/<id>`       | Update todo                                                    |
+| DELETE | `/api/todos/<id>`       | Delete todo                                                    |
+| POST   | `/api/todos/upload-url` | Get S3 presigned upload URL (body: `filename`, `content_type`) |
 
 ---
 
@@ -322,10 +313,10 @@ To serve both the SPA and the API on port 80:
 
 ## Troubleshooting
 
-| Issue | What to check |
-|-------|----------------|
-| **CORS (API)** | Ensure `CORS_ALLOWED_ORIGINS` includes the origin the browser uses (e.g. `http://<ec2>:3000`). |
-| **CORS (S3)** | Configure bucket CORS for the frontend origin and methods `PUT`/`GET`. |
-| **Images not loading** | S3 bucket (or CloudFront) must allow public read for image URLs, or set `VITE_IMAGE_BASE_URL` to a CDN that can serve them. |
-| **502 Bad Gateway** | Backend container running; Nginx/Frontend can resolve `backend:8000` on the Compose network. |
-| **DB connection errors** | Correct `POSTGRES_*` env vars; backend can reach the `postgres` service; run migrations if the DB is new. |
+| Issue                    | What to check                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| **CORS (API)**           | Ensure `CORS_ALLOWED_ORIGINS` includes the origin the browser uses (e.g. `http://<ec2>:3000`).                              |
+| **CORS (S3)**            | Configure bucket CORS for the frontend origin and methods `PUT`/`GET`.                                                      |
+| **Images not loading**   | S3 bucket (or CloudFront) must allow public read for image URLs, or set `VITE_IMAGE_BASE_URL` to a CDN that can serve them. |
+| **502 Bad Gateway**      | Backend container running; Nginx/Frontend can resolve `backend:8000` on the Compose network.                                |
+| **DB connection errors** | Correct `POSTGRES_*` env vars; backend can reach the `postgres` service; run migrations if the DB is new.                   |

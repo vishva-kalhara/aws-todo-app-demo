@@ -95,23 +95,3 @@ flowchart LR
   B --> S3
   A --> P
 ```
-
-## Production variant (optional: ALB + HTTPS)
-
-```mermaid
-flowchart TB
-  User[User]
-  Route53[Route 53]
-  ACM[ACM Certificate]
-  ALB[Application Load Balancer]
-  EC2[EC2 - Docker Compose]
-  S3[S3]
-  CloudFront[CloudFront - optional]
-
-  User --> Route53
-  Route53 --> ALB
-  ALB --> EC2
-  EC2 --> S3
-  User -.->|Images| CloudFront
-  CloudFront -.-> S3
-```
